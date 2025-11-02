@@ -104,7 +104,7 @@ func TestRemoteClient_Create(t *testing.T) {
 			t.Fatal(tracerr.Sprint(err))
 		}
 
-		err = client.create(models.Create(tt.inputPack), remoteStorageMockFunc_create)
+		err = client.create(models.Create(tt.inputPack), remoteStorageMockFunc_create, "create")
 		if err != nil {
 			t.Fatal(tracerr.Sprint(err))
 		}
