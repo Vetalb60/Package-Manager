@@ -1,0 +1,38 @@
+{
+  "packets": [
+    {
+      "name": "packet-1",
+      "ver": "1.10",
+      "targets": [
+        {
+          "path": "test/*",
+          "exclude": "*.ext"
+        },
+        {
+          "path": "test/*/*",
+          "exclude": "*.noext"
+        }
+      ]
+    },
+    {
+      "name": "packet-3",
+      "ver": "2.0",
+      "targets": [
+        {
+          "path": "test/*",
+          "exclude": "*.ext"
+        }
+      ]
+    },
+    {
+      "name": "packet-2",
+      "ver": "2.0",
+      "targets": [
+        {
+          "path": "test/*",
+          "exclude": "*"
+        }
+      ]
+    }
+  ]
+}

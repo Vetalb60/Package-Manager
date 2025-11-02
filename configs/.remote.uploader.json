@@ -1,0 +1,15 @@
+{
+  "ssh": {
+    "username": "developer",
+    "password": "1337",
+    "timeout": 5,
+    "host": "localhost",
+    "port": 22,
+    "private-key": "",
+    "ssh-key-exchanges": [
+      "diffie-hellman-group14-sha256",
+      "diffie-hellman-group-exchange-sha256"
+    ],
+    "ssh-storage-path": "remote"
+  }
+}
