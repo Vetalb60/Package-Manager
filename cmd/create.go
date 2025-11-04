@@ -22,8 +22,8 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"RemoteUploader/internal"
-	"RemoteUploader/internal/models"
+	"PackageManager/internal"
+	"PackageManager/internal/models"
 	"encoding/json"
 	"log"
 	"os"
@@ -40,7 +40,7 @@ var createCmd = &cobra.Command{
 	Use:   "create",
 	Short: "create a new package",
 	Run: func(cmd *cobra.Command, args []string) {
-		rClient, ok := viper.Get("remote-client").(*internal.RemoteClient)
+		rClient, ok := viper.Get("remote-client").(*internal.PackageManager)
 		if !ok {
 			cobra.CheckErr("remote-client is not a valid remote client")
 		}

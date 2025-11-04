@@ -1,8 +1,8 @@
 package internal
 
 import (
-	"RemoteUploader/internal/models"
-	"RemoteUploader/internal/utils"
+	"PackageManager/internal/models"
+	"PackageManager/internal/utils"
 	"context"
 	"errors"
 	"fmt"
@@ -13,9 +13,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mholt/archives"
 	"github.com/ztrue/tracerr"
 )
+
+var remoteFsPath = "remote"
+var outputPath = "output"
 
 func TestRemoteClient_Create(t *testing.T) {
 	var tests = []struct {
@@ -90,16 +92,14 @@ func TestRemoteClient_Create(t *testing.T) {
 
 	os.Chdir("../")
 
-	remoteFsPath := "remote"
-	outputPath := "output"
-
 	defer os.RemoveAll(remoteFsPath)
 	defer os.RemoveAll(outputPath)
 
 	for _, tt := range tests {
 		os.Mkdir(remoteFsPath, fs.ModePerm)
 		os.Mkdir(outputPath, fs.ModePerm)
-		client, err := NewRemoteClient(context.Background(), &uploaderMock{})
+		mock := &uploaderMock{}
+		client, err := NewRemoteClient(context.Background(), mock)
 		if err != nil {
 			t.Fatal(tracerr.Sprint(err))
 		}
@@ -136,10 +136,22 @@ func TestRemoteClient_Create(t *testing.T) {
 		if err != nil {
 			t.Fatal(tracerr.Sprint(err))
 		}
-		for _, f := range tt.wantFiles {
-			_, err := os.Stat(fmt.Sprintf("%s/%s", outputPath, f))
-			if err == nil {
-				t.Fatal(err)
+
+		for _, p := range tt.inputUnpack.Packages {
+			op, needVer := utils.ParseVersion(p.Ver)
+			versions, err := mock.GetVersions(p.Name)
+			if err != nil {
+				t.Fatal(tracerr.Sprint(err))
+			}
+			for _, version := range versions {
+				haveVer := strings.Replace(version.Name(), filepath.Ext(version.Name()), "", -1)
+				ok, err := utils.CompareVersions(haveVer, needVer, op)
+				if err != nil {
+					t.Fatal(tracerr.Sprint(err))
+				}
+				if ok {
+					t.Fatal(tracerr.Sprint(fmt.Errorf("version %s not match", version.Name())))
+				}
 			}
 		}
 
@@ -176,14 +188,32 @@ func getFiles(wantFiles []models.Targets) ([]string, error) {
 
 type uploaderMock struct{}
 
-func (u uploaderMock) Remove(filePath string, needVer string, op int) error {
+func (u uploaderMock) Remove(versionStatement string) error {
 	//	mock
 	return nil
 }
 
-func (u uploaderMock) Download(dst, filePath, needVer string, op int) error {
+func (u uploaderMock) Download(versionStatement string) (models.IArchiveStream, error) {
 	//	mock
-	return nil
+	return nil, nil
+}
+
+func (u uploaderMock) GetVersions(versionStatement string) ([]os.FileInfo, error) {
+	packagePath := fmt.Sprintf("%s/%s", remoteFsPath, versionStatement)
+	entries, err := os.ReadDir(packagePath)
+	if err != nil {
+		return nil, tracerr.Wrap(err)
+	}
+	ret := make([]os.FileInfo, 0)
+	for _, entry := range entries {
+		fi, err := entry.Info()
+		if err != nil {
+			return nil, tracerr.Wrap(err)
+		}
+		ret = append(ret, fi)
+	}
+
+	return ret, nil
 }
 
 func (u uploaderMock) GetStoragePath() string {
@@ -206,14 +236,30 @@ func (u uploaderMock) Close() error {
 	return nil
 }
 
-func remoteStorageMockFunc_create(r io.ReadWriter, remotePath string) error {
-	_, err := os.Stat(remotePath)
+func remoteStorageMockFunc_create(streamFrom io.ReadWriter, versionStatement string) error {
+	versionStatement = fmt.Sprintf("%s/%s.zip", remoteFsPath, versionStatement)
+	_, err := os.Stat(versionStatement)
 	if err == nil {
 		return errors.New("file already exists")
 	}
 
-	os.MkdirAll(filepath.Dir(remotePath), fs.ModePerm)
-	f, err := os.OpenFile(remotePath, os.O_CREATE|os.O_WRONLY, fs.ModePerm)
+	os.MkdirAll(filepath.Dir(versionStatement), fs.ModePerm)
+	f, err := os.OpenFile(versionStatement, os.O_CREATE|os.O_WRONLY, fs.ModePerm)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = io.Copy(f, streamFrom)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func remoteStorageMockFunc_update(r io.ReadWriter, versionStatement string) error {
+	versionStatement = fmt.Sprintf("%s/%s.zip", remoteFsPath, versionStatement)
+	os.MkdirAll(filepath.Dir(versionStatement), fs.ModePerm)
+	f, err := os.OpenFile(versionStatement, os.O_TRUNC|os.O_WRONLY, 0755)
 	if err != nil {
 		return err
 	}
@@ -225,102 +271,19 @@ func remoteStorageMockFunc_create(r io.ReadWriter, remotePath string) error {
 	return nil
 }
 
-func remoteStorageMockFunc_update(r io.ReadWriter, dst string) error {
-	f, err := os.OpenFile(dst, os.O_TRUNC|os.O_WRONLY, 0755)
+func remoteStorageMockFunc_fetch(versionStatement string) (models.IArchiveStream, error) {
+	srcFile, err := os.OpenFile(fmt.Sprintf("%s/%s", remoteFsPath, versionStatement), os.O_RDONLY, 0755)
 	if err != nil {
-		return err
+		return nil, tracerr.Wrap(err)
 	}
-	defer f.Close()
-	_, err = io.Copy(f, r)
-	if err != nil {
-		return err
-	}
-	return nil
+
+	return srcFile, nil
 }
 
-func remoteStorageMockFunc_fetch(dst, packagePath string, needVer string, op int) error {
-	entries, err := os.ReadDir(packagePath)
+func remoteStorageMockFunc_remove(versionStatement string) error {
+	err := os.RemoveAll(fmt.Sprintf("%s/%s", remoteFsPath, versionStatement))
 	if err != nil {
-		return tracerr.Wrap(err)
-	}
-	for _, entry := range entries {
-		haveVer := strings.Replace(entry.Name(), filepath.Ext(entry.Name()), "", -1)
-		ok, err := utils.CompareVersions(haveVer, needVer, op)
-		if err != nil {
-			return nil
-		}
-		if !ok {
-			return nil
-		}
-		archPath := filepath.Join(packagePath, entry.Name())
-		srcFile, err := os.OpenFile(archPath, os.O_RDONLY, 0755)
-		if err != nil {
-			return tracerr.Wrap(err)
-		}
-		defer srcFile.Close()
-
-		fs_, err := archives.FileSystem(context.Background(), filepath.Base(archPath), srcFile)
-		if err != nil {
-			return tracerr.Wrap(err)
-		}
-
-		err = fs.WalkDir(fs_, ".", func(path string, d fs.DirEntry, err error) error {
-			if err != nil {
-				return tracerr.Wrap(err)
-			}
-			if d.IsDir() {
-				err = os.MkdirAll(filepath.Join(dst, path), fs.ModePerm)
-				if err != nil {
-					return tracerr.Wrap(err)
-				}
-				return nil
-			}
-
-			f, err := os.Create(fmt.Sprintf("%s/%s", dst, path))
-			if err != nil {
-				return tracerr.Wrap(err)
-			}
-			defer f.Close()
-
-			archEntry, err := fs_.Open(path)
-			if err != nil {
-				return tracerr.Wrap(err)
-			}
-			defer archEntry.Close()
-
-			_, err = io.Copy(f, archEntry)
-			if err != nil {
-				return tracerr.Wrap(err)
-			}
-			return nil
-		})
-		if err != nil {
-			return tracerr.Wrap(err)
-		}
-	}
-
-	return nil
-}
-
-func remoteStorageMockFunc_remove(packagePath string, needVer string, op int) error {
-	entries, err := os.ReadDir(packagePath)
-	if err != nil {
-		return tracerr.Wrap(err)
-	}
-	for _, entry := range entries {
-		haveVer := strings.Replace(entry.Name(), filepath.Ext(entry.Name()), "", -1)
-		ok, err := utils.CompareVersions(haveVer, needVer, op)
-		if err != nil {
-			return nil
-		}
-		if !ok {
-			return nil
-		}
-
-		err = os.RemoveAll(filepath.Join(packagePath, entry.Name()))
-		if err != nil {
-			return err
-		}
+		return err
 	}
 
 	return nil

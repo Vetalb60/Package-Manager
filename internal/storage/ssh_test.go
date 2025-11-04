@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"RemoteUploader/internal/configs"
+	"PackageManager/internal/configs"
 	"archive/zip"
 	"context"
 	"os"

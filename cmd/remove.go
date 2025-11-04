@@ -22,8 +22,8 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"RemoteUploader/internal"
-	"RemoteUploader/internal/models"
+	"PackageManager/internal"
+	"PackageManager/internal/models"
 	"encoding/json"
 	"os"
 
@@ -36,7 +36,7 @@ var removeCmd = &cobra.Command{
 	Use:   "remove",
 	Short: "remove exist package",
 	Run: func(cmd *cobra.Command, args []string) {
-		rClient, ok := viper.Get("remote-client").(*internal.RemoteClient)
+		rClient, ok := viper.Get("remote-client").(*internal.PackageManager)
 		if !ok {
 			cobra.CheckErr("remote-client is not a valid remote client")
 		}

@@ -7,9 +7,15 @@
         {
           "path": "test/*",
           "exclude": "*.ext"
-        },
+        }
+      ]
+    },
+    {
+      "name": "packet-1",
+      "ver": "2.10",
+      "targets": [
         {
-          "path": "test/*/*",
+          "path": "test/*",
           "exclude": "*.noext"
         }
       ]
@@ -19,18 +25,18 @@
       "ver": "2.0",
       "targets": [
         {
-          "path": "test/*",
-          "exclude": "*.ext"
+          "path": "test/*/*",
+          "exclude": "*"
         }
       ]
     },
     {
       "name": "packet-2",
-      "ver": "2.0",
+      "ver": "3.0",
       "targets": [
         {
-          "path": "test/*",
-          "exclude": "*"
+          "path": "test/*/*",
+          "exclude": "*.*ext"
         }
       ]
     }

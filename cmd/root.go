@@ -22,9 +22,9 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"RemoteUploader/internal"
-	"RemoteUploader/internal/configs"
-	"RemoteUploader/internal/storage"
+	"PackageManager/internal"
+	"PackageManager/internal/configs"
+	"PackageManager/internal/storage"
 	"context"
 	"fmt"
 	"log"
@@ -38,7 +38,7 @@ import (
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "RemoteClient",
+	Use:   "PackageManager",
 	Short: "Remote client for remote storage",
 	// Uncomment the following line if your bare application
 	// has an action associated with it:

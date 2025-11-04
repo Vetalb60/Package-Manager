@@ -21,7 +21,7 @@ THE SOFTWARE.
 */
 package main
 
-import "RemoteUploader/cmd"
+import "PackageManager/cmd"
 
 func main() {
 	cmd.Execute()

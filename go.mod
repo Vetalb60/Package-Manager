@@ -1,4 +1,4 @@
-module RemoteUploader
+module PackageManager
 
 go 1.24.0
 

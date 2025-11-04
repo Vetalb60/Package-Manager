@@ -22,8 +22,8 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"RemoteUploader/internal"
-	"RemoteUploader/internal/models"
+	"PackageManager/internal"
+	"PackageManager/internal/models"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -34,7 +34,7 @@ var fetchCmd = &cobra.Command{
 	Use:   "fetch",
 	Short: "download exist package from storage",
 	Run: func(cmd *cobra.Command, args []string) {
-		rClient, ok := viper.Get("remote-client").(*internal.RemoteClient)
+		rClient, ok := viper.Get("remote-client").(*internal.PackageManager)
 		if !ok {
 			cobra.CheckErr("remote-client is not a valid remote client")
 		}
